@@ -209,6 +209,26 @@ impl fmt::Debug for ID {
     }
 }
 
+impl PartialEq for ID {
+    fn eq(&self, other: &ID) -> bool {
+        self.val == other.val
+    }
+}
+
+impl Eq for ID {}
+
+impl PartialOrd for ID {
+    fn partial_cmp(&self, other: &ID) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ID {
+    fn cmp(&self, other: &ID) -> std::cmp::Ordering {
+        self.val.cmp(&other.val)
+    }
+}
+
 // ---
 
 fn rand_int() -> AtomicUsize {
@@ -297,9 +317,21 @@ mod tests {
         let mut g = new_generator();
 
         let mut previous_counter = 0;
+        let mut previous_id = g.new().unwrap();
 
         for i in 0..total {
             let id = g.new().unwrap();
+
+            assert!(
+                previous_id < id,
+                format!(
+                    "{} ({:?}) not < {} ({:?})",
+                    previous_id.encode(),
+                    previous_id,
+                    id.encode(),
+                    id
+                )
+            );
 
             if i > 0 {
                 assert_eq!(id.counter(), previous_counter + 1);
@@ -307,11 +339,39 @@ mod tests {
 
             previous_counter = id.counter();
 
-            let x = id.encode();
-            //println!("{:?}", x);
-            assert_eq!(x.len(), 20);
+            {
+                let x = id.encode();
+                //println!("{:?}", x);
+                assert_eq!(x.len(), 20);
+            }
 
             assert_eq!(id.machine(), g.machine_id);
+
+            previous_id = id;
         }
+    }
+
+    #[test]
+    fn test_eq() {
+        let mut g = new_generator();
+
+        let a = g.new().unwrap();
+        let b = g.new().unwrap();
+        let c = g.new().unwrap();
+
+        assert!(a == a);
+        assert!(a <= a);
+        assert!(a != b);
+        assert!(a != c);
+
+        assert!(a < b);
+        assert!(b > a);
+        assert!(b >= a);
+
+        assert!(b < c);
+        assert!(c > b);
+
+        assert!(a < c);
+        assert!(c > a);
     }
 }
