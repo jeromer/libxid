@@ -72,7 +72,7 @@
 //! let mut g = libxid::new_generator();
 //!
 //! for i in 0..10{
-//!     let id = g.new().unwrap();
+//!     let id = g.new_id().unwrap();
 //!
 //!     println!(
 //!             "encoded: {:?}    machine: {:?}    counter: {:?}    time: {:?}",
@@ -129,11 +129,11 @@ pub fn new_generator() -> Box<Generator> {
 }
 
 impl Generator {
-    pub fn new(&mut self) -> Result<ID, SystemTimeError> {
-        self.new_with_time(SystemTime::now())
+    pub fn new_id(&mut self) -> Result<ID, SystemTimeError> {
+        self.new_id_with_time(SystemTime::now())
     }
 
-    pub fn new_with_time(&mut self, t: SystemTime) -> Result<ID, SystemTimeError> {
+    pub fn new_id_with_time(&mut self, t: SystemTime) -> Result<ID, SystemTimeError> {
         match t.duration_since(UNIX_EPOCH) {
             Ok(n) => Ok(self.generate(n.as_secs())),
             Err(e) => Err(e),
@@ -317,10 +317,10 @@ mod tests {
         let mut g = new_generator();
 
         let mut previous_counter = 0;
-        let mut previous_id = g.new().unwrap();
+        let mut previous_id = g.new_id().unwrap();
 
         for i in 0..total {
-            let id = g.new().unwrap();
+            let id = g.new_id().unwrap();
 
             assert!(
                 previous_id < id,
@@ -355,9 +355,9 @@ mod tests {
     fn test_eq() {
         let mut g = new_generator();
 
-        let a = g.new().unwrap();
-        let b = g.new().unwrap();
-        let c = g.new().unwrap();
+        let a = g.new_id().unwrap();
+        let b = g.new_id().unwrap();
+        let c = g.new_id().unwrap();
 
         assert!(a == a);
         assert!(a <= a);

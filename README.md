@@ -72,7 +72,7 @@ use libxid;
 let mut g = libxid::new_generator();
 
 for i in 0..10{
-    let id = g.new().unwrap();
+    let id = g.new_id().unwrap();
 
     println!(
             "encoded: {:?}    machine: {:?}    counter: {:?}    time: {:?}",
