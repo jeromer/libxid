@@ -129,11 +129,11 @@ pub fn new_generator() -> Generator {
 }
 
 impl Generator {
-    pub fn new_id(&mut self) -> Result<ID, SystemTimeError> {
+    pub fn new_id(&self) -> Result<ID, SystemTimeError> {
         self.new_id_with_time(SystemTime::now())
     }
 
-    pub fn new_id_with_time(&mut self, t: SystemTime) -> Result<ID, SystemTimeError> {
+    pub fn new_id_with_time(&self, t: SystemTime) -> Result<ID, SystemTimeError> {
         match t.duration_since(UNIX_EPOCH) {
             Ok(n) => Ok(self.generate(n.as_secs())),
             Err(e) => Err(e),
@@ -320,7 +320,7 @@ mod tests {
 
         println!("Testing with {} ids", total);
 
-        let mut g = new_generator();
+        let g = new_generator();
 
         let mut previous_counter = 0;
         let mut previous_id = g.new_id().unwrap();
@@ -359,7 +359,7 @@ mod tests {
 
     #[test]
     fn test_eq() {
-        let mut g = new_generator();
+        let g = new_generator();
 
         let a = g.new_id().unwrap();
         let b = g.new_id().unwrap();
