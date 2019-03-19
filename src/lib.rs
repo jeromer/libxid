@@ -120,12 +120,12 @@ pub struct Generator {
     pid: u32,
 }
 
-pub fn new_generator() -> Box<Generator> {
-    return Box::new(Generator {
+pub fn new_generator() -> Generator {
+    return Generator {
         counter: rand_int(),
         machine_id: read_machine_id(),
         pid: get_pid(),
-    });
+    };
 }
 
 impl Generator {
