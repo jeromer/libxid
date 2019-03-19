@@ -209,6 +209,12 @@ impl fmt::Debug for ID {
     }
 }
 
+impl fmt::Display for ID {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ID: {:?}", self.encode())
+    }
+}
+
 impl PartialEq for ID {
     fn eq(&self, other: &ID) -> bool {
         self.val == other.val
