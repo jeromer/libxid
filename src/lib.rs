@@ -99,6 +99,7 @@ use crc32fast::Hasher;
 use data_encoding::{Encoding, Specification, SpecificationError};
 use gethostname::*;
 use rand::prelude::*;
+use std::error::Error;
 use std::fmt;
 use std::fs;
 use std::fs::File;
@@ -106,7 +107,7 @@ use std::io;
 use std::io::prelude::*;
 use std::process;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, SystemTime, SystemTimeError, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const ID_LEN: usize = 12;
 
@@ -128,15 +129,30 @@ pub fn new_generator() -> Generator {
     };
 }
 
+#[derive(Clone, Debug)]
+pub struct IDGenerationError(String);
+
+impl Error for IDGenerationError {
+    fn description(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl fmt::Display for IDGenerationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl Generator {
-    pub fn new_id(&self) -> Result<ID, SystemTimeError> {
+    pub fn new_id(&self) -> Result<ID, IDGenerationError> {
         self.new_id_with_time(SystemTime::now())
     }
 
-    pub fn new_id_with_time(&self, t: SystemTime) -> Result<ID, SystemTimeError> {
+    pub fn new_id_with_time(&self, t: SystemTime) -> Result<ID, IDGenerationError> {
         match t.duration_since(UNIX_EPOCH) {
             Ok(n) => Ok(self.generate(n.as_secs())),
-            Err(e) => Err(e),
+            Err(e) => Err(IDGenerationError(e.description().to_string())),
         }
     }
 
