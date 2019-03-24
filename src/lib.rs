@@ -111,23 +111,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const ID_LEN: usize = 12;
 
-pub struct ID {
-    val: [u8; ID_LEN],
-}
-
-pub struct Generator {
-    counter: AtomicUsize,
-    machine_id: [u8; 3],
-    pid: u32,
-}
-
-pub fn new_generator() -> Generator {
-    return Generator {
-        counter: rand_int(),
-        machine_id: read_machine_id(),
-        pid: get_pid(),
-    };
-}
+// ---
 
 #[derive(Clone, Debug)]
 pub struct IDGenerationError(String);
@@ -142,6 +126,22 @@ impl fmt::Display for IDGenerationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
     }
+}
+
+// ---
+
+pub struct Generator {
+    counter: AtomicUsize,
+    machine_id: [u8; 3],
+    pid: u32,
+}
+
+pub fn new_generator() -> Generator {
+    return Generator {
+        counter: rand_int(),
+        machine_id: read_machine_id(),
+        pid: get_pid(),
+    };
 }
 
 impl Generator {
@@ -188,6 +188,10 @@ impl fmt::Debug for Generator {
 }
 
 // ---
+
+pub struct ID {
+    val: [u8; ID_LEN],
+}
 
 impl ID {
     pub fn encode(&self) -> String {
