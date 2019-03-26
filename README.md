@@ -84,5 +84,10 @@ for i in 0..10{
 }
 ```
 
+### Performance
+
+Currently `libxid` is able to generate and encode 1 million unique ids in less than 0.5 seconds.
+The decoding process is much much slower for the moment.
+
 [Olivier Poitrey]: https://github.com/rs
 [xid]: https://github.com/rs/xid
