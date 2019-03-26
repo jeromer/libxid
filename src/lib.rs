@@ -134,6 +134,7 @@ pub struct Generator {
     counter: AtomicUsize,
     machine_id: [u8; 3],
     pid: u32,
+    encoder: Encoding,
 }
 
 pub fn new_generator() -> Generator {
@@ -141,6 +142,7 @@ pub fn new_generator() -> Generator {
         counter: rand_int(),
         machine_id: read_machine_id(),
         pid: get_pid(),
+        encoder: new_encoder().unwrap(),
     };
 }
 
@@ -173,7 +175,10 @@ impl Generator {
         buff[10] = (i >> 8) as u8;
         buff[11] = (i) as u8;
 
-        ID { val: buff }
+        ID {
+            val: buff,
+            encoder: self.encoder.clone(),
+        }
     }
 }
 
@@ -189,14 +194,16 @@ impl fmt::Debug for Generator {
 
 // ---
 
-#[derive(Clone, Hash)]
+// TODO: implement HASH
+#[derive(Clone)]
 pub struct ID {
     val: [u8; ID_LEN],
+    encoder: Encoding,
 }
 
 impl ID {
     pub fn encode(&self) -> String {
-        ID::encoding().unwrap().encode(&self.val)
+        self.encoder.encode(&self.val)
     }
 
     pub fn machine(&self) -> [u8; 3] {
@@ -215,12 +222,6 @@ impl ID {
 
     pub fn counter(&self) -> u32 {
         (self.val[9] as u32) << 16 | (self.val[10] as u32) << 8 | (self.val[11] as u32)
-    }
-
-    fn encoding() -> Result<Encoding, SpecificationError> {
-        let mut spec = Specification::new();
-        spec.symbols.push_str("0123456789abcdefghijklmnopqrstuv");
-        spec.encoding()
     }
 }
 
@@ -245,9 +246,12 @@ impl PartialEq for ID {
 impl From<String> for ID {
     fn from(s: String) -> Self {
         let default = [0u8; ID_LEN];
+        let encoder = new_encoder().unwrap();
 
         ID {
-            val: match ID::encoding().unwrap().decode(s.into_bytes().as_ref()) {
+            encoder: encoder.clone(),
+
+            val: match encoder.decode(s.into_bytes().as_ref()) {
                 Ok(decoded) => {
                     if decoded.len() != ID_LEN {
                         default
@@ -344,6 +348,12 @@ fn read_machine_id() -> [u8; 3] {
 
     let hash = md5::compute(id);
     return [hash[0], hash[1], hash[2]];
+}
+
+fn new_encoder() -> Result<Encoding, SpecificationError> {
+    let mut spec = Specification::new();
+    spec.symbols.push_str("0123456789abcdefghijklmnopqrstuv");
+    spec.encoding()
 }
 
 #[cfg(target_os = "linux")]
