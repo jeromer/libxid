@@ -196,7 +196,7 @@ pub struct ID {
 
 impl ID {
     pub fn encode(&self) -> String {
-        self.encoding().unwrap().encode(&self.val)
+        ID::encoding().unwrap().encode(&self.val)
     }
 
     pub fn machine(&self) -> [u8; 3] {
@@ -217,7 +217,7 @@ impl ID {
         (self.val[9] as u32) << 16 | (self.val[10] as u32) << 8 | (self.val[11] as u32)
     }
 
-    fn encoding(&self) -> Result<Encoding, SpecificationError> {
+    fn encoding() -> Result<Encoding, SpecificationError> {
         let mut spec = Specification::new();
         spec.symbols.push_str("0123456789abcdefghijklmnopqrstuv");
         spec.encoding()
@@ -239,6 +239,39 @@ impl fmt::Display for ID {
 impl PartialEq for ID {
     fn eq(&self, other: &ID) -> bool {
         self.val == other.val
+    }
+}
+
+impl From<String> for ID {
+    fn from(s: String) -> Self {
+        let default = [0u8; ID_LEN];
+
+        ID {
+            val: match ID::encoding().unwrap().decode(s.into_bytes().as_ref()) {
+                Ok(decoded) => {
+                    if decoded.len() != ID_LEN {
+                        default
+                    } else {
+                        [
+                            decoded[0],
+                            decoded[1],
+                            decoded[2],
+                            decoded[3],
+                            decoded[4],
+                            decoded[5],
+                            decoded[6],
+                            decoded[7],
+                            decoded[8],
+                            decoded[9],
+                            decoded[10],
+                            decoded[11],
+                        ]
+                    }
+                }
+
+                Err(_) => default,
+            },
+        }
     }
 }
 
@@ -400,5 +433,19 @@ mod tests {
 
         assert!(a < c);
         assert!(c > a);
+    }
+
+    #[test]
+    fn test_from() {
+        let g = new_generator();
+
+        let a = g.new_id().unwrap();
+
+        let b = ID::from(a.encode());
+
+        assert_eq!(a.val, b.val);
+        assert_eq!(a.encode(), b.encode());
+
+        assert_eq!(ID::from("invalid".to_string()).val, [0u8; ID_LEN]);
     }
 }
