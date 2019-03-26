@@ -189,7 +189,7 @@ impl fmt::Debug for Generator {
 
 // ---
 
-#[derive(Clone)]
+#[derive(Clone, Hash)]
 pub struct ID {
     val: [u8; ID_LEN],
 }
