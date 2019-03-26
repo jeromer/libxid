@@ -134,7 +134,6 @@ pub struct Generator {
     counter: AtomicUsize,
     machine_id: [u8; 3],
     pid: u32,
-    encoder: Encoding,
 }
 
 pub fn new_generator() -> Generator {
@@ -142,7 +141,6 @@ pub fn new_generator() -> Generator {
         counter: rand_int(),
         machine_id: read_machine_id(),
         pid: get_pid(),
-        encoder: new_encoder().unwrap(),
     };
 }
 
@@ -175,10 +173,7 @@ impl Generator {
         buff[10] = (i >> 8) as u8;
         buff[11] = (i) as u8;
 
-        ID {
-            val: buff,
-            encoder: self.encoder.clone(),
-        }
+        ID { val: buff }
     }
 }
 
@@ -194,16 +189,41 @@ impl fmt::Debug for Generator {
 
 // ---
 
-// TODO: implement HASH
-#[derive(Clone)]
+#[derive(Clone, Hash)]
 pub struct ID {
     val: [u8; ID_LEN],
-    encoder: Encoding,
 }
 
 impl ID {
     pub fn encode(&self) -> String {
-        self.encoder.encode(&self.val)
+        let alphabet = String::from("0123456789abcdefghijklmnopqrstuv");
+
+        let buff = alphabet.as_bytes();
+
+        std::str::from_utf8(&[
+            buff[(self.val[0] as usize) >> 3],
+            buff[(self.val[1] as usize) >> 6 & 0x1F | ((self.val[0] as usize) << 2) & 0x1F],
+            buff[((self.val[1] as usize) >> 1) & 0x1F],
+            buff[((self.val[2] as usize) >> 4) & 0x1F | ((self.val[1] as usize) << 4) & 0x1F],
+            buff[(self.val[3] as usize) >> 7 | ((self.val[2] as usize) << 1) & 0x1F],
+            buff[((self.val[3] as usize) >> 2) & 0x1F],
+            buff[(self.val[4] as usize) >> 5 | ((self.val[3] as usize) << 3) & 0x1F],
+            buff[(self.val[4] as usize) & 0x1F],
+            buff[(self.val[5] as usize) >> 3],
+            buff[((self.val[6] as usize) >> 6) & 0x1F | ((self.val[5] as usize) << 2) & 0x1F],
+            buff[((self.val[6] as usize) >> 1) & 0x1F],
+            buff[((self.val[7] as usize) >> 4) & 0x1F | ((self.val[6] as usize) << 4) & 0x1F],
+            buff[(self.val[8] as usize) >> 7 | ((self.val[7] as usize) << 1) & 0x1F],
+            buff[((self.val[8] as usize) >> 2) & 0x1F],
+            buff[((self.val[9] as usize) >> 5) | ((self.val[8] as usize) << 3) & 0x1F],
+            buff[(self.val[9] as usize) & 0x1F],
+            buff[(self.val[10] as usize) >> 3],
+            buff[((self.val[11] as usize) >> 6) & 0x1F | ((self.val[10] as usize) << 2) & 0x1F],
+            buff[((self.val[11] as usize) >> 1) & 0x1F],
+            buff[((self.val[11] as usize) << 4) & 0x1F],
+        ])
+        .unwrap()
+        .to_string()
     }
 
     pub fn machine(&self) -> [u8; 3] {
@@ -246,12 +266,9 @@ impl PartialEq for ID {
 impl From<String> for ID {
     fn from(s: String) -> Self {
         let default = [0u8; ID_LEN];
-        let encoder = new_encoder().unwrap();
 
         ID {
-            encoder: encoder.clone(),
-
-            val: match encoder.decode(s.into_bytes().as_ref()) {
+            val: match new_encoder().unwrap().decode(s.into_bytes().as_ref()) {
                 Ok(decoded) => {
                     if decoded.len() != ID_LEN {
                         default
@@ -382,24 +399,24 @@ mod tests {
     fn test_simple() {
         let total = 1e6 as u32;
 
-        println!("Testing with {} ids", total);
-
         let g = new_generator();
 
         let mut previous_counter = 0;
         let mut previous_id = g.new_id().unwrap();
-
+        use std::time::Instant;
+        let start = Instant::now();
         for i in 0..total {
             let id = g.new_id().unwrap();
 
             assert!(
                 previous_id < id,
                 format!(
-                    "{} ({:?}) not < {} ({:?})",
+                    "{} ({:?}) != {} ({:?}) {}",
                     previous_id.encode(),
                     previous_id,
                     id.encode(),
-                    id
+                    id,
+                    i
                 )
             );
 
@@ -409,16 +426,45 @@ mod tests {
 
             previous_counter = id.counter();
 
-            {
-                let x = id.encode();
-                //println!("{:?}", x);
-                assert_eq!(x.len(), 20);
-            }
-
+            let x = id.encode();
+            assert_eq!(x.len(), 20);
             assert_eq!(id.machine(), g.machine_id);
 
             previous_id = id;
         }
+
+        println!(
+            "Generated {} ids id {} seconds",
+            total,
+            start.elapsed().as_secs() as f64 + start.elapsed().subsec_nanos() as f64 * 1e-9
+        );
+    }
+
+    #[test]
+    fn test_speed() {
+        let total = 1e6 as u32;
+
+        let g = new_generator();
+
+        use std::time::Instant;
+        let start = Instant::now();
+
+        for _ in 0..total {
+            g.new_id().unwrap();
+        }
+
+        let elapsed =
+            start.elapsed().as_secs() as f64 + start.elapsed().subsec_nanos() as f64 * 1e-9;
+
+        let limit = 0.5;
+
+        assert!(
+            elapsed <= limit,
+            format!(
+                "Must generated {} ids id less than {} second, took {} seconds",
+                total, limit, elapsed
+            )
+        );
     }
 
     #[test]
