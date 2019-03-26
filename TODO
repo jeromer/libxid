@@ -1,0 +1,1 @@
+- implement decoding with unrolled loops (ref: https://github.com/rs/xid/blob/15d26544def341f036c5f8dca987a4cbe575032c/id.go#L248-L261)
