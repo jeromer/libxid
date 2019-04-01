@@ -97,6 +97,8 @@ use byteorder::{BigEndian, ByteOrder};
 use crc32fast::Hasher;
 use gethostname::*;
 use rand::prelude::*;
+use serde::de::{self, Visitor};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::error::Error;
 use std::fmt;
 use std::fs;
@@ -354,6 +356,41 @@ impl Ord for ID {
     }
 }
 
+impl Serialize for ID {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.encode().as_str())
+    }
+}
+
+struct IDVisitor;
+
+impl<'de> Visitor<'de> for IDVisitor {
+    type Value = ID;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a str")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(ID::from(value.to_string()))
+    }
+}
+
+impl<'de> Deserialize<'de> for ID {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(IDVisitor)
+    }
+}
+
 // ---
 
 fn rand_int() -> AtomicUsize {
@@ -579,5 +616,20 @@ mod tests {
                 total, limit, elapsed
             )
         );
+    }
+
+    #[test]
+    fn test_json() {
+        let g = new_generator();
+
+        let src = g.new_id().unwrap();
+
+        let serialized = serde_json::to_string(&src).unwrap();
+
+        let deserialized: ID = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(src, deserialized);
+
+        let invalid: ID = serde_json::from_str("\"invalid\"").unwrap();
+        assert_eq!(invalid.val, [0u8; ID_LEN]);
     }
 }
