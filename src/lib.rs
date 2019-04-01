@@ -89,14 +89,12 @@
 
 extern crate byteorder;
 extern crate crc32fast;
-extern crate data_encoding;
 extern crate gethostname;
 extern crate md5;
 extern crate rand;
 
 use byteorder::{BigEndian, ByteOrder};
 use crc32fast::Hasher;
-use data_encoding::{Encoding, Specification, SpecificationError};
 use gethostname::*;
 use rand::prelude::*;
 use std::error::Error;
@@ -226,6 +224,74 @@ impl ID {
         .to_string()
     }
 
+    pub fn decode(input: String) -> Self {
+        let mut dec = [1u8; 256];
+
+        dec[48] = 0 as u8;
+        dec[49] = 1 as u8;
+        dec[50] = 2 as u8;
+        dec[51] = 3 as u8;
+        dec[52] = 4 as u8;
+        dec[53] = 5 as u8;
+        dec[54] = 6 as u8;
+        dec[55] = 7 as u8;
+        dec[56] = 8 as u8;
+        dec[57] = 9 as u8;
+        dec[97] = 10 as u8;
+        dec[98] = 11 as u8;
+        dec[99] = 12 as u8;
+        dec[100] = 13 as u8;
+        dec[101] = 14 as u8;
+        dec[102] = 15 as u8;
+        dec[103] = 16 as u8;
+        dec[104] = 17 as u8;
+        dec[105] = 18 as u8;
+        dec[106] = 19 as u8;
+        dec[107] = 20 as u8;
+        dec[108] = 21 as u8;
+        dec[109] = 22 as u8;
+        dec[110] = 23 as u8;
+        dec[111] = 24 as u8;
+        dec[112] = 25 as u8;
+        dec[113] = 26 as u8;
+        dec[114] = 27 as u8;
+        dec[115] = 28 as u8;
+        dec[116] = 29 as u8;
+        dec[117] = 30 as u8;
+        dec[118] = 31 as u8;
+
+        // XXX: the code commented below generated the array above
+        // let alphabet = String::from("0123456789abcdefghijklmnopqrstuv");
+        // let buff = alphabet.as_bytes();
+        //
+        // for i in 0..alphabet2.len() {
+        //     dec[alphabet2[i] as usize] = i as u8
+        // }
+
+        let src = input.as_bytes();
+
+        ID {
+            val: [
+                dec[src[0] as usize] << 3 | dec[src[1] as usize] >> 2,
+                dec[src[1] as usize] << 6 | dec[src[2] as usize] << 1 | dec[src[3] as usize] >> 4,
+                dec[src[3] as usize] << 4 | dec[src[4] as usize] >> 1,
+                dec[src[4] as usize] << 7 | dec[src[5] as usize] << 2 | dec[src[6] as usize] >> 3,
+                dec[src[6] as usize] << 5 | dec[src[7] as usize],
+                dec[src[8] as usize] << 3 | dec[src[9] as usize] >> 2,
+                dec[src[9] as usize] << 6 | dec[src[10] as usize] << 1 | dec[src[11] as usize] >> 4,
+                dec[src[11] as usize] << 4 | dec[src[12] as usize] >> 1,
+                dec[src[12] as usize] << 7
+                    | dec[src[13] as usize] << 2
+                    | dec[src[14] as usize] >> 3,
+                dec[src[14] as usize] << 5 | dec[src[15] as usize],
+                dec[src[16] as usize] << 3 | dec[src[17] as usize] >> 2,
+                dec[src[17] as usize] << 6
+                    | dec[src[18] as usize] << 1
+                    | dec[src[19] as usize] >> 4,
+            ],
+        }
+    }
+
     pub fn machine(&self) -> [u8; 3] {
         [self.val[4], self.val[5], self.val[6]]
     }
@@ -264,34 +330,12 @@ impl PartialEq for ID {
 }
 
 impl From<String> for ID {
+    // TODO: implement try_from https://doc.rust-lang.org/std/convert/trait.TryFrom.html when no
+    // longer nightly
     fn from(s: String) -> Self {
-        let default = [0u8; ID_LEN];
-
-        ID {
-            val: match new_encoder().unwrap().decode(s.into_bytes().as_ref()) {
-                Ok(decoded) => {
-                    if decoded.len() != ID_LEN {
-                        default
-                    } else {
-                        [
-                            decoded[0],
-                            decoded[1],
-                            decoded[2],
-                            decoded[3],
-                            decoded[4],
-                            decoded[5],
-                            decoded[6],
-                            decoded[7],
-                            decoded[8],
-                            decoded[9],
-                            decoded[10],
-                            decoded[11],
-                        ]
-                    }
-                }
-
-                Err(_) => default,
-            },
+        match s.len() == 20 {
+            true => ID::decode(s),
+            _ => ID { val: [0u8; ID_LEN] },
         }
     }
 }
@@ -367,12 +411,6 @@ fn read_machine_id() -> [u8; 3] {
     return [hash[0], hash[1], hash[2]];
 }
 
-fn new_encoder() -> Result<Encoding, SpecificationError> {
-    let mut spec = Specification::new();
-    spec.symbols.push_str("0123456789abcdefghijklmnopqrstuv");
-    spec.encoding()
-}
-
 #[cfg(target_os = "linux")]
 fn platform_machine_id() -> Result<String, io::Error> {
     // XXX: unlikely to work if read with an unpriviledged user
@@ -394,6 +432,7 @@ fn hostname_string() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Instant;
 
     #[test]
     fn test_simple() {
@@ -446,7 +485,6 @@ mod tests {
 
         let g = new_generator();
 
-        use std::time::Instant;
         let start = Instant::now();
 
         for _ in 0..total {
@@ -503,5 +541,43 @@ mod tests {
         assert_eq!(a.encode(), b.encode());
 
         assert_eq!(ID::from("invalid".to_string()).val, [0u8; ID_LEN]);
+    }
+
+    #[test]
+    fn test_encode_decode() {
+        let total = 1e6 as u32;
+
+        let g = new_generator();
+
+        let mut buff: Vec<String> = Vec::with_capacity(total as usize);
+
+        for _ in 0..total {
+            let id = g.new_id().unwrap();
+
+            buff.push(id.encode().clone());
+
+            assert_eq!(id, ID::decode(id.encode()));
+        }
+
+        // ----
+
+        let start = Instant::now();
+
+        for encoded in buff.into_iter() {
+            ID::decode(encoded);
+        }
+
+        let elapsed =
+            start.elapsed().as_secs() as f64 + start.elapsed().subsec_nanos() as f64 * 1e-9;
+
+        let limit = 0.5;
+
+        assert!(
+            elapsed <= limit,
+            format!(
+                "Must decode {} ids id less than {} second, took {} seconds",
+                total, limit, elapsed
+            )
+        );
     }
 }
