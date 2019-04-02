@@ -137,11 +137,11 @@ pub struct Generator {
 }
 
 pub fn new_generator() -> Generator {
-    return Generator {
+    Generator {
         counter: rand_int(),
         machine_id: read_machine_id(),
         pid: get_pid(),
-    };
+    }
 }
 
 impl Generator {
@@ -189,7 +189,7 @@ impl fmt::Debug for Generator {
 
 // ---
 
-#[derive(Clone, Hash)]
+#[derive(Clone)]
 pub struct ID {
     val: [u8; ID_LEN],
 }
@@ -305,11 +305,11 @@ impl ID {
     pub fn time(&self) -> SystemTime {
         let ts = BigEndian::read_u32(&[self.val[0], self.val[1], self.val[2], self.val[3]]);
 
-        UNIX_EPOCH + Duration::from_secs(ts as u64)
+        UNIX_EPOCH + Duration::from_secs(u64::from(ts))
     }
 
     pub fn counter(&self) -> u32 {
-        (self.val[9] as u32) << 16 | (self.val[10] as u32) << 8 | (self.val[11] as u32)
+        u32::from(self.val[9]) << 16 | u32::from(self.val[10]) << 8 | (u32::from(self.val[11]))
     }
 }
 
@@ -335,10 +335,11 @@ impl From<String> for ID {
     // TODO: implement try_from https://doc.rust-lang.org/std/convert/trait.TryFrom.html when no
     // longer nightly
     fn from(s: String) -> Self {
-        match s.len() == 20 {
-            true => ID::decode(s),
-            _ => ID { val: [0u8; ID_LEN] },
+        if s.len() == 20 {
+            return ID::decode(s);
         }
+
+        ID { val: [0u8; ID_LEN] }
     }
 }
 
@@ -428,7 +429,7 @@ fn read_machine_id() -> [u8; 3] {
     let id = match platform_machine_id() {
         // XXX: https://github.com/rust-lang/rfcs/blob/master/text/0107-pattern-guards-with-bind-by-move.md
         Ok(x) => {
-            if x.len() > 0 {
+            if !x.is_empty() {
                 x
             } else {
                 hostname_string()
@@ -438,14 +439,15 @@ fn read_machine_id() -> [u8; 3] {
         _ => hostname_string(),
     };
 
-    if id.len() <= 0 {
+    if id.is_empty() {
         let mut buff = [0u8; 3];
         thread_rng().fill_bytes(&mut buff);
         return buff;
     }
 
     let hash = md5::compute(id);
-    return [hash[0], hash[1], hash[2]];
+
+    [hash[0], hash[1], hash[2]]
 }
 
 #[cfg(target_os = "linux")]
