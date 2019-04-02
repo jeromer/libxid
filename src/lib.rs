@@ -472,15 +472,14 @@ mod tests {
     use std::time::Instant;
 
     #[test]
-    fn test_simple() {
+    fn test_basic() {
         let total = 1e6 as u32;
 
         let g = new_generator();
 
         let mut previous_counter = 0;
         let mut previous_id = g.new_id().unwrap();
-        use std::time::Instant;
-        let start = Instant::now();
+
         for i in 0..total {
             let id = g.new_id().unwrap();
 
@@ -508,16 +507,10 @@ mod tests {
 
             previous_id = id;
         }
-
-        println!(
-            "Generated {} ids id {} seconds",
-            total,
-            start.elapsed().as_secs() as f64 + start.elapsed().subsec_nanos() as f64 * 1e-9
-        );
     }
 
     #[test]
-    fn test_speed() {
+    fn test_generation_speed() {
         let total = 1e6 as u32;
 
         let g = new_generator();
@@ -537,6 +530,38 @@ mod tests {
             elapsed <= limit,
             format!(
                 "Must generated {} ids id less than {} second, took {} seconds",
+                total, limit, elapsed
+            )
+        );
+    }
+
+    #[test]
+    fn test_encoding_speed() {
+        let total = 1e6 as u32;
+
+        let g = new_generator();
+
+        let mut buff: Vec<ID> = Vec::with_capacity(total as usize);
+
+        for _ in 0..total {
+            buff.push(g.new_id().unwrap().clone());
+        }
+
+        let start = Instant::now();
+
+        for id in buff.into_iter() {
+            id.encode();
+        }
+
+        let elapsed =
+            start.elapsed().as_secs() as f64 + start.elapsed().subsec_nanos() as f64 * 1e-9;
+
+        let limit = 1.5;
+
+        assert!(
+            elapsed <= limit,
+            format!(
+                "Must encode {} ids id less than {} second, took {} seconds",
                 total, limit, elapsed
             )
         );
@@ -586,6 +611,19 @@ mod tests {
 
         let g = new_generator();
 
+        for _ in 0..total {
+            let id = g.new_id().unwrap();
+
+            assert_eq!(id, ID::decode(id.encode()));
+        }
+    }
+
+    #[test]
+    fn test_decoding_speed() {
+        let total = 1e6 as u32;
+
+        let g = new_generator();
+
         let mut buff: Vec<String> = Vec::with_capacity(total as usize);
 
         for _ in 0..total {
@@ -612,7 +650,7 @@ mod tests {
         assert!(
             elapsed <= limit,
             format!(
-                "Must decode {} ids id less than {} second, took {} seconds",
+                "Must decode {} ids in less than {} second, took {} seconds",
                 total, limit, elapsed
             )
         );
