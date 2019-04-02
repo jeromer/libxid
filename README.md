@@ -1,3 +1,5 @@
+https://crates.io/crates/libxid
+
 (This is a port of [Olivier Poitrey]'s [xid] Go library)
 
 Package xid is a globally unique id generator library, ready to be used safely directly in your server code.
