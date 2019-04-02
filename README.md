@@ -86,8 +86,13 @@ for i in 0..10{
 
 ### Performance
 
-Currently `libxid` is able to generate and encode 1 million unique ids in less than 0.5 seconds.
-The decoder can decode 1 million unique ids in less than 0.5 seconds as well.
+Currently `libxid` can:
+- generate 1 million unique ids in less than 0.5 seconds (without encoding)
+- encode 1 million unique ids in around 1.5 seconds
+- decode 1 million unique ids in less than 0.5 seconds
+
+You can try to reproduce these numbers by yourself by running `cargo test _speed`
+which will launch all speed related tests.
 
 [Olivier Poitrey]: https://github.com/rs
 [xid]: https://github.com/rs/xid
