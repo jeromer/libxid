@@ -432,11 +432,11 @@ fn read_machine_id() -> [u8; 3] {
             if !x.is_empty() {
                 x
             } else {
-                hostname_string()
+                hostname()
             }
         }
 
-        _ => hostname_string(),
+        _ => hostname(),
     };
 
     if id.is_empty() {
@@ -462,8 +462,10 @@ fn platform_machine_id() -> Result<String, io::Error> {
     Ok(contents)
 }
 
-fn hostname_string() -> String {
-    gethostname().into_string().unwrap()
+fn hostname() -> String {
+    gethostname()
+        .into_string()
+        .expect("can not fetch machine's hostname")
 }
 
 // ---
