@@ -226,7 +226,7 @@ impl ID {
         .to_string()
     }
 
-    pub fn decode(input: String) -> Self {
+    pub fn decode(input: &str) -> Self {
         let mut dec = [1u8; 256];
 
         dec[48] = 0 as u8;
@@ -331,10 +331,10 @@ impl PartialEq for ID {
     }
 }
 
-impl From<String> for ID {
+impl From<&str> for ID {
     // TODO: implement try_from https://doc.rust-lang.org/std/convert/trait.TryFrom.html when no
     // longer nightly
-    fn from(s: String) -> Self {
+    fn from(s: &str) -> Self {
         if s.len() == 20 {
             return ID::decode(s);
         }
@@ -379,7 +379,7 @@ impl<'de> Visitor<'de> for IDVisitor {
     where
         E: de::Error,
     {
-        Ok(ID::from(value.to_string()))
+        Ok(ID::from(value))
     }
 }
 
@@ -601,12 +601,12 @@ mod tests {
 
         let a = g.new_id().unwrap();
 
-        let b = ID::from(a.encode());
+        let b = ID::from(a.encode().as_str());
 
         assert_eq!(a.val, b.val);
         assert_eq!(a.encode(), b.encode());
 
-        assert_eq!(ID::from("invalid".to_string()).val, [0u8; ID_LEN]);
+        assert_eq!(ID::from("invalid").val, [0u8; ID_LEN]);
     }
 
     #[test]
@@ -618,7 +618,7 @@ mod tests {
         for _ in 0..total {
             let id = g.new_id().unwrap();
 
-            assert_eq!(id, ID::decode(id.encode()));
+            assert_eq!(id, ID::decode(&id.encode()));
         }
     }
 
@@ -635,7 +635,7 @@ mod tests {
 
             buff.push(id.encode().clone());
 
-            assert_eq!(id, ID::decode(id.encode()));
+            assert_eq!(id, ID::decode(&id.encode()));
         }
 
         // ----
@@ -643,7 +643,7 @@ mod tests {
         let start = Instant::now();
 
         for encoded in buff.into_iter() {
-            ID::decode(encoded);
+            ID::decode(&encoded);
         }
 
         let elapsed =
